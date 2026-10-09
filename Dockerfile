@@ -1,18 +1,19 @@
-FROM node:20-alpine
+FROM node:22-alpine
 RUN apk add --no-cache openssl
-
-EXPOSE 3000
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-
 COPY package.json package-lock.json* ./
 
-RUN npm ci --omit=dev && npm cache clean --force
+# Dev dependencies (vite) are needed for the build and pruned afterwards.
+RUN npm ci
 
 COPY . .
 
-RUN npm run build
+RUN npx prisma generate && npm run build && npm prune --omit=dev && npm cache clean --force
 
+ENV NODE_ENV=production
+EXPOSE 3000
+
+# Runs prisma generate + migrate deploy, then starts the server on $PORT.
 CMD ["npm", "run", "docker-start"]
