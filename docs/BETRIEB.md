@@ -42,6 +42,13 @@ Gespeichert werden nur Shopify IDs, Bestellnummer (#1001), Trackingnummer, Carri
 - `shop/redact`: Shop mit allen Daten gelöscht.
 - `customers/data_request`: keine Kundendaten vorhanden.
 
-## Production (offen)
+## Hosting
 
-Geplant: Node Hosting (z. B. Render oder Fly.io) + Postgres. Dafür in `prisma/schema.prisma` `provider = "postgresql"` und `url = env("DATABASE_URL")` setzen und die Migrationen für Postgres neu erzeugen.
+- App: Render Web Service (Start: Free, ab erstem installierenden Shop: Starter)
+- Datenbank: Neon Postgres (Frankfurt). Branch `production` für Render, Branch `dev` für lokale Entwicklung. Immer die direkte Verbindung (ohne `-pooler`).
+- Cron + Keep-alive: IONOS Webspace, `ionos/delivery-sync-cron.php` alle 10 Minuten (`GET /health`, stündlich `POST /api/cron/sync`). `/health` greift absichtlich nicht auf die Datenbank zu.
+
+## Vor dem Livegang (Pflicht)
+
+- [ ] Neon: Passwort von `neondb_owner` auf Branch **production** zurücksetzen (das ursprüngliche Passwort wurde im Chat geteilt).
+- [ ] Production-Werte für `DELIVERY_SYNC_ENCRYPTION_KEY` und `CRON_SECRET` neu erzeugen (nicht die Dev-Werte verwenden).
