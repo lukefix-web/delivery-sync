@@ -1,5 +1,5 @@
 client_id = "777026a7ccdf8e61537260cc42900c3a"
-application_url = "https://example.com"
+application_url = "https://delivery-sync.onrender.com"
 embedded = true
 name = "Delivery Sync"
 
@@ -22,7 +22,7 @@ uri = "/webhooks/compliance"
 compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
 
 [auth]
-redirect_urls = ["https://example.com/api/auth"]
+redirect_urls = ["https://delivery-sync.onrender.com/api/auth"]
 
 [build]
 include_config_on_deploy = true
