@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+// One row per Shopify shop that installed the app (tenant).
+model Shop {
+  id             String         @id @default(cuid())
+  shopDomain     String         @unique
+  isActive       Boolean        @default(true)
+  installedAt    DateTime       @default(now())
+  uninstalledAt  DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  dhlCredential  DhlCredential?
+  syncState      SyncState?
+  shipments      Shipment[]
+  logs           AppLog[]
+}
+
+// DHL credentials per shop. All *Enc fields are AES-256-GCM ciphertext
+// (see app/lib/crypto.server.js); the key lives only in the environment.
+model DhlCredential {
+  id                   String    @id @default(cuid())
+  shopId               String    @unique
+  shop                 Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  apiKeyEnc            String
+  apiSecretEnc         String
+  trackingUsernameEnc  String
+  trackingPasswordEnc  String
+  lastTestedAt         DateTime?
+  lastTestOk           Boolean?
+  lastTestMessage      String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+// One row per DHL parcel of a Shopify fulfillment. A fulfillment can contain
+// several parcels, and the same tracking number can appear in several
+// fulfillments, so the tracking number alone is not unique.
+// No customer data (names, addresses, emails) is stored.
+model Shipment {
+  id                       String    @id @default(cuid())
+  shopId                   String
+  shop                     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopifyFulfillmentId     String
+  shopifyOrderId           String
+  shopifyOrderName         String
+  trackingNumber           String
+  trackingCompany          String?
+  shopifyFulfillmentStatus String?
+  dhlStatus                String?
+  dhlStatusCode            String?
+  dhlDelivered             Boolean   @default(false)
+  dhlDeliveredAt           DateTime?
+  shopifyDelivered         Boolean   @default(false)
+  shopifyDeliveredAt       DateTime?
+  lastCheckedAt            DateTime?
+  nextCheckAt              DateTime?
+  retryCount               Int       @default(0)
+  lastError                String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@unique([shopId, shopifyFulfillmentId, trackingNumber])
+  @@index([shopId, shopifyDelivered, nextCheckAt])
+  @@index([shopId, shopifyOrderId])
+}
+
+model SyncState {
+  id               String    @id @default(cuid())
+  shopId           String    @unique
+  shop             Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  lastImportAt     DateTime?
+  lastSyncAt       DateTime?
+  lastSyncOk       Boolean?
+  lastSyncMessage  String?
+  lockedUntil      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+// Operational log per shop. Never log secrets, tokens or customer data.
+model AppLog {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  level     String
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([shopId, createdAt])
+}
